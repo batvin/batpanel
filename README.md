@@ -101,4 +101,3 @@ batman-panel reset-admin     # ریست رمز مدیر
 سوال، مشکل نصب یا خرید لایسنس:
 
 👉 **https://t.me/shocavpnadmin**
-```
