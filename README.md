@@ -102,7 +102,3 @@ batman-panel reset-admin     # ریست رمز مدیر
 
 👉 **https://t.me/shocavpnadmin**
 ```
-
----
-
-دکمه آبی **Telegram — خرید لایسنس و پشتیبانی** در بالای README نمایش داده می‌شود و با کلیک مستقیم به `https://t.me/shocavpnadmin` می‌رود.
