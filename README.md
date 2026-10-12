@@ -6,6 +6,11 @@ README آماده است. این کار را بکن:
 3. همه محتوا را پاک کن و متن زیر را جایگزین کن  
 4. **Commit changes** بزن  
 
+---
+
+متن کامل README:
+
+```markdown
 # Batpanel — Batman VPN Panel
 
 پنل مدیریت **OpenVPN** با سیستم لایسنس وابسته به IP، ربات تلگرام و مدیریت ورکر.
@@ -35,6 +40,15 @@ README آماده است. این کار را بکن:
 curl -fsSL -o batman-install.sh https://github.com/batvin/batpanel/releases/latest/download/batman-install.sh
 sed -i 's/\r$//' batman-install.sh
 bash batman-install.sh
+```
+
+بعد از نصب، آدرس پنل، نام کاربری و رمز عبور نمایش داده می‌شود.  
+وارد پنل شوید و **کلید لایسنس** را در بخش لایسنس فعال کنید.
+
+> ⚠️ بدون لایسنس معتبر، پنل قفل است و فقط بخش فعال‌سازی لایسنس در دسترس است.
+
+---
+
 ## امکانات پنل
 
 | بخش | توضیح |
