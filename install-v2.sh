@@ -159,7 +159,8 @@ echo
 echo "========== INSTALLATION RESULT =========="
 cat "$TMP_DIR/health.json"
 echo
-echo "V2 Panel:     http://127.0.0.1:8000"\necho "V2 API:       http://127.0.0.1:8000/api"
+echo "V2 Panel:     http://127.0.0.1:8000"
+echo "V2 API:       http://127.0.0.1:8000/api"
 echo "API docs:     http://127.0.0.1:8000/api/docs (local/SSH tunnel only)"
 echo "Credentials:  /root/batman-v2-credentials.txt"
 if [[ -f /root/batman-v2-credentials.txt ]]; then
