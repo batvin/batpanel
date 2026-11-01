@@ -3,7 +3,8 @@ name: V2 backend checks
 on:
   pull_request:
     paths:
-      - "v2/backend/**"
+      - "v2/**"
+      - "install-v2.sh"
       - ".github/workflows/v2-checks.yml"
   push:
     branches: [main]
@@ -19,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Validate installer syntax
+        run: bash -n install-v2.sh
       - name: Compile backend
         run: python -m compileall -q v2/backend/app
       - name: Validate Docker Compose
