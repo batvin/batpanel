@@ -41,7 +41,7 @@ EOF
 fi
 
 echo "Starting Batman VPN Panel V2 control-plane MVP..."
-docker compose up -d --build
+docker compose -p batman-v2 up -d --build
 echo
 echo "API health:"
 sleep 3

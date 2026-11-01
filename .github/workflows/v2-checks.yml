@@ -1,0 +1,25 @@
+name: V2 backend checks
+
+on:
+  pull_request:
+    paths:
+      - "v2/backend/**"
+      - ".github/workflows/v2-checks.yml"
+  push:
+    branches: [main]
+    paths:
+      - "v2/backend/**"
+      - ".github/workflows/v2-checks.yml"
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile backend
+        run: python -m compileall -q v2/backend/app
+      - name: Validate Docker Compose
+        run: docker compose -f v2/docker-compose.yml config --quiet
