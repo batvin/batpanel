@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+DIR="/opt/batman-v2"
+COMPOSE="$DIR/docker-compose.yml"
+ENV="$DIR/.env"
+PROJECT="batman-v2"
+REPO="batvin/batpanel"
+BACKUPS="/var/backups/batman-v2"
+
+need_root(){ [[ $EUID -eq 0 ]] || { echo "این دستور را با root اجرا کنید."; exit 1; }; }
+dc(){ docker compose -p "$PROJECT" -f "$COMPOSE" --env-file "$ENV" "$@"; }
+panel_port(){ sed -n 's/^PANEL_PORT=//p' "$ENV" | tail -n1 | grep -E '^[0-9]+$' || echo 8000; }
+
+backup(){
+  mkdir -p "$BACKUPS"; chmod 700 "$BACKUPS"
+  local vol="${PROJECT}_batman_v2_data"
+  if docker volume inspect "$vol" >/dev/null 2>&1; then
+    docker run --rm -v "$vol:/data:ro" -v "$BACKUPS:/backup" alpine:3.20 sh -c 'tar czf "/backup/batman-v2-manual-$(date +%Y%m%d-%H%M%S).tgz" -C /data .'
+    echo "پشتیبان دیتابیس در $BACKUPS ساخته شد."
+  else
+    echo "دیتابیس هنوز ساخته نشده است."
+  fi
+}
+
+update_panel(){
+  echo "در حال دریافت آخرین نسخه از GitHub..."
+  backup
+  bash <(curl -fsSL --retry 3 "https://raw.githubusercontent.com/$REPO/main/install-v2.sh")
+}
+
+change_port(){
+  local current new
+  current="$(panel_port)"
+  read -r -p "پورت فعلی $current، پورت جدید: " new
+  [[ "$new" =~ ^[0-9]+$ ]] && ((new>=1024 && new<=65535)) || { echo "پورت نامعتبر است (1024 تا 65535)."; return 1; }
+  if ss -lnt | awk '{print $4}' | grep -Eq "[:.]$new$"; then echo "این پورت در حال استفاده است."; return 1; fi
+  backup
+  sed -i '/^PANEL_PORT=/d' "$ENV"
+  echo "PANEL_PORT=$new" >> "$ENV"
+  chmod 600 "$ENV"
+  dc up -d
+  echo "پورت تغییر کرد: http://127.0.0.1:$new"
+  echo "فایروال ارائه‌دهنده VPS را نیز بررسی کنید."
+}
+
+change_credentials(){
+  local new_user new_pass confirm secret_file
+  read -r -p "نام کاربری جدید: " new_user
+  [[ "$new_user" =~ ^[a-zA-Z0-9_.-]{3,64}$ ]] || { echo "نام کاربری نامعتبر است."; return 1; }
+  read -r -s -p "رمز عبور جدید (حداقل 14 کاراکتر): " new_pass; echo
+  [[ ${#new_pass} -ge 14 && "$new_pass" =~ ^[a-zA-Z0-9!@#%_^+=.,:/?-]+$ ]] || { echo "رمز باید حداقل 14 کاراکتر و فقط شامل حروف، عدد و علائم مجاز باشد."; return 1; }
+  read -r -s -p "تکرار رمز عبور: " confirm; echo
+  [[ "$new_pass" == "$confirm" ]] || { echo "رمزها یکسان نیستند."; return 1; }
+
+  backup
+  secret_file="$(mktemp)"
+  chmod 600 "$secret_file"
+  printf '%s\n%s\n' "$new_user" "$new_pass" > "$secret_file"
+  if ! cat "$secret_file" | dc exec -T api python -c '
+import sys
+from sqlalchemy import select
+from app.main import SessionLocal, Admin, hash_password
+lines = sys.stdin.read().splitlines()
+if len(lines) != 2:
+    raise SystemExit("Invalid credential input")
+with SessionLocal() as db:
+    admins = db.scalars(select(Admin).order_by(Admin.id)).all()
+    if not admins:
+        raise SystemExit("No admin record exists")
+    admins[0].username = lines[0]
+    admins[0].password_hash = hash_password(lines[1])
+    db.commit()
+'; then
+    rm -f "$secret_file"
+    echo "تغییر حساب مدیر در دیتابیس انجام نشد."
+    return 1
+  fi
+  python3 - "$ENV" "$secret_file" <<'PY'
+import pathlib, sys
+env_path = pathlib.Path(sys.argv[1])
+values = pathlib.Path(sys.argv[2]).read_text().splitlines()
+if len(values) != 2:
+    raise SystemExit("Invalid credential input")
+updates = {"ADMIN_USERNAME": values[0], "ADMIN_PASSWORD": values[1]}
+lines = [line for line in env_path.read_text().splitlines()
+         if line.split("=", 1)[0] not in updates]
+lines.extend(f"{key}={value}" for key, value in updates.items())
+env_path.write_text("\n".join(lines) + "\n")
+env_path.chmod(0o600)
+PY
+  rm -f "$secret_file"
+  dc restart
+  local port
+  port="$(panel_port)"
+  printf 'BAT-PANEL V2\nUsername: %s\nPassword: %s\nPanel: http://SERVER-IP:%s\nSupport: https://t.me/shocavpnadmin\n' "$new_user" "$new_pass" "$port" > /root/batman-v2-credentials.txt
+  chmod 600 /root/batman-v2-credentials.txt
+  echo "نام کاربری و رمز مدیر تغییر کرد. نشست قبلی باطل شده؛ دوباره وارد پنل شوید."
+}
+
+menu(){
+  clear 2>/dev/null || true
+  echo "======================================"
+  echo "               BAT-PANEL"
+  echo "         Batman VPN Management"
+  echo "======================================"
+  dc ps || true
+  echo
+  echo "1) وضعیت و سلامت پنل"
+  echo "2) راه‌اندازی مجدد"
+  echo "3) توقف پنل"
+  echo "4) روشن کردن پنل"
+  echo "5) مشاهده لاگ‌ها"
+  echo "6) پشتیبان‌گیری دیتابیس"
+  echo "7) دریافت و نصب آخرین نسخه"
+  echo "8) تغییر پورت پنل"
+  echo "9) تغییر نام کاربری و رمز مدیر"
+  echo "10) نمایش آدرس و اطلاعات نصب"
+  echo "0) خروج"
+  echo
+  read -r -p "انتخاب شما: " choice
+  case "$choice" in
+    1) dc ps; curl -fsS "http://127.0.0.1:$(panel_port)/api/health" || true ;;
+    2) dc restart ;;
+    3) dc stop ;;
+    4) dc up -d ;;
+    5) dc logs --tail=120 -f ;;
+    6) backup ;;
+    7) update_panel ;;
+    8) change_port ;;
+    9) change_credentials ;;
+    10) local p; p="$(panel_port)"; echo "پنل: http://127.0.0.1:$p"; echo "پشتیبانی: https://t.me/shocavpnadmin"; echo "فایل تنظیمات: $ENV"; echo "اطلاعات ورود: /root/batman-v2-credentials.txt" ;;
+    0) exit 0 ;;
+    *) echo "گزینه نامعتبر است." ;;
+  esac
+  echo
+  read -r -p "برای بازگشت Enter بزنید..." _
+}
+
+need_root
+[[ -f "$COMPOSE" && -f "$ENV" ]] || { echo "BAT-PANEL V2 نصب نیست یا مسیر نصب معتبر نیست."; exit 1; }
+while true; do menu; done

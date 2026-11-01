@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${PANEL_PORT:-8000}:8000"
     volumes:
       - batman_v2_data:/data
     read_only: true
