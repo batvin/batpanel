@@ -20,6 +20,90 @@ update_panel(){
   echo "در حال دریافت آخرین نسخه از GitHub..."
   /usr/bin/env bash <(curl -fsSL --retry 3 "https://raw.githubusercontent.com/$REPO/main/install-v2.sh")
 }
+change_credentials(){
+  local new_user new_pass confirm
+  read -r -p "نام کاربری جدید: " new_user
+  [[ "$new_user" =~ ^[a-zA-Z0-9_.-]{3,64}$ ]] || { echo "نام کاربری نامعتبر است."; return 1; }
+  read -r -s -p "رمز عبور جدید (حداقل 14 کاراکتر): " new_pass; echo
+  [[ ${#new_pass} -ge 14 && "$new_pass" != *
+  current="$(sed -n 's/^PANEL_PORT=//p' "$ENV" | tail -n1)"
+  current="${current:-8000}"
+  read -r -p "پورت فعلی $current، پورت جدید: " new
+  [[ "$new" =~ ^[0-9]+$ ]] && ((new>=1024 && new<=65535)) || { echo "پورت نامعتبر است (1024 تا 65535)."; return 1; }
+  if ss -lnt | awk '{print $4}' | grep -Eq "[:.]$new$"; then echo "این پورت در حال استفاده است."; return 1; fi
+  sed -i '/^PANEL_PORT=/d' "$ENV"; echo "PANEL_PORT=$new" >> "$ENV"; chmod 600 "$ENV"
+  dc up -d
+  echo "پورت تغییر کرد: http://SERVER-IP:$new"
+  echo "اگر UFW فعال است، اجازه دسترسی به این پورت را بدهید."
+}
+menu(){
+  clear 2>/dev/null || true
+  echo "======================================"
+  echo "             BAT-PANEL"
+  echo "       Batman VPN Management"
+  echo "======================================"
+  dc ps || true
+  echo
+  echo "1) وضعیت پنل"
+  echo "2) راه‌اندازی مجدد"
+  echo "3) توقف پنل"
+  echo "4) روشن کردن پنل"
+  echo "5) مشاهده لاگ‌ها"
+  echo "6) پشتیبان‌گیری دیتابیس"
+  echo "7) دریافت و نصب آخرین نسخه"
+  echo "8) تغییر پورت پنل"
+  echo "9) نمایش آدرس و اطلاعات نصب"
+  echo "0) خروج"
+  echo
+  read -r -p "انتخاب شما: " choice
+  case "$choice" in
+    1) dc ps; curl -fsS "http://127.0.0.1:$(sed -n 's/^PANEL_PORT=//p' "$ENV" | tail -n1 | grep -E '^[0-9]+$' || echo 8000)/api/health" || true ;;
+    2) dc restart ;;
+    3) dc stop ;;
+    4) dc up -d ;;
+    5) dc logs --tail=120 -f ;;
+    6) backup ;;
+    7) backup; update_panel ;;
+    8) backup; change_port ;;
+    9) change_credentials ;;\n    10) local p; p="$(sed -n 's/^PANEL_PORT=//p' "$ENV" | tail -n1)"; echo "پنل: http://SERVER-IP:${p:-8000}"; echo "پشتیبانی: https://t.me/shocavpnadmin"; echo "فایل تنظیمات: $ENV" ;;
+    0) exit 0 ;;
+    *) echo "گزینه نامعتبر است." ;;
+  esac
+  echo; read -r -p "برای بازگشت Enter بزنید..." _
+}
+need_root
+[[ -f "$COMPOSE" && -f "$ENV" ]] || { echo "Batman V2 نصب نیست یا مسیر نصب معتبر نیست."; exit 1; }
+while true; do menu; done
+\\n'* ]] || { echo "رمز باید حداقل 14 کاراکتر و بدون خط جدید باشد."; return 1; }
+  read -r -s -p "تکرار رمز عبور: " confirm; echo
+  [[ "$new_pass" == "$confirm" ]] || { echo "رمزها یکسان نیستند."; return 1; }
+  backup
+  ADMIN_NEW_USER="$new_user" ADMIN_NEW_PASS="$new_pass" dc exec -T api python - <<'PY'
+import os
+from sqlalchemy import select
+from app.main import SessionLocal, Admin, hash_password
+with SessionLocal() as db:
+    admins = db.scalars(select(Admin).order_by(Admin.id)).all()
+    if not admins:
+        raise SystemExit("No admin record exists")
+    admin = admins[0]
+    admin.username = os.environ["ADMIN_NEW_USER"]
+    admin.password_hash = hash_password(os.environ["ADMIN_NEW_PASS"])
+    db.commit()
+PY
+  python3 - "$ENV" "$new_user" "$new_pass" <<'PY'
+import pathlib, sys
+p=pathlib.Path(sys.argv[1]); lines=p.read_text().splitlines()
+values={"ADMIN_USERNAME":sys.argv[2],"ADMIN_PASSWORD":sys.argv[3]}
+keys=set(values)
+lines=[line for line in lines if line.split("=",1)[0] not in keys]
+lines.extend(f"{k}={v}" for k,v in values.items())
+p.write_text("\\n".join(lines)+"\\n")
+p.chmod(0o600)
+PY
+  dc restart
+  echo "نام کاربری و رمز عبور مدیر تغییر کرد. دوباره وارد پنل شوید."
+}
 change_port(){
   local current new
   current="$(sed -n 's/^PANEL_PORT=//p' "$ENV" | tail -n1)"
