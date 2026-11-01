@@ -82,12 +82,13 @@ if [[ ! -f "$INSTALL_DIR/$ENV_FILE" ]]; then
   [[ "$ADMIN_USERNAME" =~ ^[a-zA-Z0-9_.-]{3,64}$ ]] || die "نام کاربری باید 3 تا 64 کاراکتر انگلیسی باشد."
   while true; do
     read -r -s -p "رمز عبور مدیر (حداقل 14 کاراکتر): " ADMIN_PASSWORD; echo
-    [[ ${#ADMIN_PASSWORD} -ge 14 ]] && break
+    [[ ${#ADMIN_PASSWORD} -ge 14 && "$ADMIN_PASSWORD" =~ ^[a-zA-Z0-9!@#%_^+=.,:/?-]+$ ]] && break
     echo "رمز عبور کوتاه است."
   done
   read -r -p "پورت پنل [8000]: " PANEL_PORT
   PANEL_PORT="${PANEL_PORT:-8000}"
   [[ "$PANEL_PORT" =~ ^[0-9]+$ ]] && ((PANEL_PORT>=1024 && PANEL_PORT<=65535)) || die "پورت باید بین 1024 و 65535 باشد."
+  if ss -lnt | awk '{print $4}' | grep -Eq "[:.]$PANEL_PORT$"; then die "این پورت از قبل در حال استفاده است."; fi
   JWT_SECRET="$(openssl rand -hex 48)"
   umask 077
   cat > "$INSTALL_DIR/$ENV_FILE" <<EOF
@@ -117,17 +118,25 @@ else
     EXISTING_USERNAME="$(sed -n 's/^ADMIN_USERNAME=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
     EXISTING_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
     if [[ -n "$EXISTING_USERNAME" && -n "$EXISTING_PASSWORD" ]]; then
-      cat > /root/batman-v2-credentials.txt <<EOF
-Batman VPN Panel V2
-Username: $EXISTING_USERNAME
-Password: $EXISTING_PASSWORD
-API: http://127.0.0.1:8000
-API docs: http://127.0.0.1:8000/api/docs
-EOF
-      chmod 600 /root/batman-v2-credentials.txt
+      : # Credentials file is regenerated below from the preserved environment.
     fi
   fi
 fi
+
+PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
+PANEL_PORT="${PANEL_PORT:-8000}"
+ADMIN_USERNAME="$(sed -n 's/^ADMIN_USERNAME=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
+ADMIN_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
+cat > /root/batman-v2-credentials.txt <<EOF
+BAT-PANEL V2
+Username: $ADMIN_USERNAME
+Password: $ADMIN_PASSWORD
+Panel: http://SERVER-IP:$PANEL_PORT
+API: http://SERVER-IP:$PANEL_PORT/api
+API docs: http://SERVER-IP:$PANEL_PORT/api/docs
+Support: https://t.me/shocavpnadmin
+EOF
+chmod 600 /root/batman-v2-credentials.txt
 
 install -m 700 "$INSTALL_DIR/scripts/bat-panel" /usr/local/bin/bat-panel
 cd "$INSTALL_DIR"
@@ -142,7 +151,11 @@ if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
     sh -c "tar czf /backup/batman-v2-data-$(date +%Y%m%d-%H%M%S).tgz -C /data ."
 fi
 
-log "Building and starting Batman V2..."
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+  ufw allow "$PANEL_PORT/tcp" >/dev/null
+fi
+
+log "Building and starting BAT-PANEL V2..."
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
 
 log "Waiting for API health check..."
@@ -193,5 +206,6 @@ echo
 echo "Backup directory: $BACKUP_ROOT"
 echo "Terminal menu: bat-panel"
 echo "Support: https://t.me/shocavpnadmin"
+echo "Firewall: TCP $PANEL_PORT (UFW rule added only if UFW was active). Check provider firewall too."
 echo "Batman V1 was left running and unchanged."
 echo "IMPORTANT: V2 now includes a working API-connected web dashboard, but live VPN provisioning and V1 user migration are not implemented."
