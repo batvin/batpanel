@@ -134,7 +134,9 @@ docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --b
 log "Waiting for API health check..."
 healthy=0
 for _ in $(seq 1 30); do
-  if curl --fail --silent --max-time 3 "$HEALTH_URL" > "$TMP_DIR/health.json"; then
+  if curl --fail --silent --max-time 3 "$HEALTH_URL" > "$TMP_DIR/health.json" \
+    && curl --fail --silent --max-time 3 http://127.0.0.1:8000/ | grep -q "ورود به پنل" \
+    && curl --fail --silent --output /dev/null --max-time 3 http://127.0.0.1:8000/assets/styles.css; then
     healthy=1
     break
   fi
