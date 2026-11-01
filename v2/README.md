@@ -1,44 +1,99 @@
-# Batman VPN Panel V2 — Foundation
+# Batman VPN Panel V2
 
-> V2 is an isolated rebuild. It does not replace or modify the V1 installer, database, certificates, firewall rules, or running services.
+> بازنویسی مستقل نسخه دوم. فایل‌ها و سرویس‌های V1، دیتابیس، گواهی‌ها، فایروال و نصب فعلی را تغییر نمی‌دهد.
 
-## Status
+## وضعیت فعلی
 
-This first milestone establishes the dark dashboard UI and the technical boundary for the multi-protocol backend. The dashboard currently uses clearly labelled demo data. It is not connected to a VPN server and must not be used to provision real users yet.
+**V2 در مرحله پایه و نمونه رابط کاربری است؛ هنوز نسخه قابل نصب یا مناسب مدیریت کاربران واقعی نیست.** داشبورد از داده‌های ساختگی استفاده می‌کند و به هیچ سرور VPN یا دیتابیسی متصل نیست.
 
-## Product direction
+## مشخصات محصول
 
-- Protocol adapters: OpenVPN, Xray (VLESS / VMess / Trojan), and WireGuard.
-- Multi-node control plane with per-node health and capability reporting.
-- User lifecycle: create, suspend, renew, revoke, quota, expiry and device limits.
-- Subscription delivery and client-specific configuration export.
-- Telegram bot and documented API.
-- Roles, audit events, backup/restore and secure remote-agent communication.
-- Dark-first responsive UI with reduced-motion support.
+| بخش | مشخصات هدف |
+|---|---|
+| معماری | پنل مرکزی (Control Plane) به‌همراه Agent روی هر سرور |
+| پروتکل‌ها | OpenVPN، VLESS، VMess، Trojan و WireGuard |
+| مدیریت سرورها | چند سرور، وضعیت اتصال، سلامت Agent و گزارش منابع |
+| مدیریت کاربران | ساخت، تعلیق، تمدید، حذف، محدودیت حجم، تاریخ انقضا و تعداد دستگاه |
+| اشتراک | تولید لینک/فایل متناسب با پروتکل و اطلاعات اتصال کاربر |
+| ربات | اتصال تلگرام برای ساخت و مدیریت سرویس |
+| نمایندگی | نقش‌ها، سطح دسترسی و سهمیه نمایندگان |
+| API | API مستند برای اتصال سرویس‌های بیرونی |
+| امنیت | TLS، احراز هویت، RBAC، محدودیت درخواست و ثبت رویدادهای مدیریتی |
+| ذخیره‌سازی | دیتابیس تراکنشی با migration نسخه‌بندی‌شده |
+| رابط | فارسی و RTL، تم تاریک، واکنش‌گرا و پشتیبانی از reduced motion |
 
-## Architecture rules
+### فناوری‌های اجرایی
 
-1. The control plane must not shell-interpolate user input. Protocol operations belong to typed adapters with validated arguments.
-2. A node agent initiates an authenticated outbound connection to the control plane; never expose an unrestricted root SSH endpoint.
-3. Store password hashes using Argon2id (or a maintained equivalent), rotate secrets, and never log credentials or private keys.
-4. Use TLS, CSRF protection for cookie sessions, secure/HttpOnly/SameSite cookies, rate limits and explicit RBAC.
-5. Persist state in a transactional database with schema migrations. Do not use a shared JSON file as the production database.
-6. Adapter operations must be idempotent where possible and report capability/health explicitly.
-7. V1 data migration must be an explicit, backed-up, reversible operation. No automatic deletion or in-place upgrade.
+انتخاب قطعی زبان و فریم‌ورک backend، دیتابیس و روش استقرار پس از استخراج و بررسی کامل payload نسخه V1 و تثبیت قرارداد API انجام می‌شود؛ در این مرحله نباید وابستگی یا نسخه‌ای را به‌عنوان تصمیم نهایی جا زد.
 
-## Planned milestones
+## مشخصات نصب و پیش‌نیازها
 
-- [x] V2 isolated branch and dark dashboard prototype.
-- [ ] Extract and review the V1 embedded application payload; inventory routes, models, dependencies and known defects.
-- [ ] Define API contract, database schema and migration tests.
-- [ ] Implement authentication, RBAC, audit log and node enrollment.
-- [ ] Implement OpenVPN adapter and integration tests.
-- [ ] Implement Xray adapter (VLESS, VMess, Trojan) and integration tests.
-- [ ] Implement WireGuard adapter and integration tests.
-- [ ] Add subscription generation, Telegram integration and reseller roles.
-- [ ] Add backup/restore, health monitoring and hardened installer.
-- [ ] Test on disposable Ubuntu 22.04/24.04 VMs before any production rollout.
+### اجرای پیش‌نمایش رابط کاربری
 
-## Run the UI prototype
+این روش فقط فایل‌های HTML/CSS را نمایش می‌دهد و هیچ VPN، سرویس سیستمی یا تنظیم شبکه‌ای نصب نمی‌کند.
 
-Open `web/index.html` in a browser. The metrics and node/user records are static demo fixtures.
+**نیازمندی‌ها:** مرورگر به‌روز و Python 3 برای وب‌سرور محلی (یا باز کردن مستقیم فایل HTML).
+
+از ریشه مخزن:
+
+```bash
+cd v2/web
+python3 -m http.server 8080 --bind 127.0.0.1
+```
+
+سپس در همان سیستم باز کن:
+
+```
+http://127.0.0.1:8080
+```
+
+برای توقف، در ترمینال `Ctrl+C` بزن. اگر روی VPS اجرا می‌کنی، فعلاً پورت را عمومی نکن؛ برای مشاهده از تونل SSH استفاده کن.
+
+### نصب نسخه واقعی پنل
+
+**هنوز آماده نیست و دستور نصب production ارائه نمی‌شود.** نصب‌کننده نهایی پس از تکمیل backend، Agent، احراز هویت، migration، backup/restore و تست روی ماشین مجازی مستقل منتشر خواهد شد.
+
+| مورد | وضعیت |
+|---|---|
+| Ubuntu 22.04 / 24.04 | سیستم‌عامل‌های هدف برای تست؛ هنوز تأیید نهایی نشده‌اند |
+| معماری CPU | هدف اولیه x86_64؛ نیازمند تست |
+| پورت‌ها و فایروال | هنوز تعیین نشده؛ در نصب نهایی مستند می‌شود |
+| دیتابیس و نسخه آن | هنوز انتخاب و pin نشده |
+| دامنه و TLS | برای استقرار عمومی لازم خواهد بود |
+| Agent سرورها | هنوز پیاده‌سازی نشده |
+| نصب خودکار و ارتقا | هنوز پیاده‌سازی و تست نشده |
+| مهاجرت V1 به V2 | فقط با backup و مسیر بازگشت؛ هنوز پیاده‌سازی نشده |
+
+**هشدار:** اسکریپت نصب V1 را برای نصب V2 اجرا نکن. روی سرور عملیاتی نیز برای آزمایش V2 سرویس OpenVPN، فایروال یا تنظیمات شبکه را تغییر نده.
+
+## معماری و قواعد امنیتی
+
+1. ورودی کاربر نباید مستقیماً در shell قرار گیرد؛ عملیات پروتکل فقط از adapterهای اعتبارسنجی‌شده انجام شود.
+2. Agent هر سرور اتصال خروجی احراز هویت‌شده به Control Plane برقرار کند؛ SSH روت آزاد در معرض اینترنت قرار نگیرد.
+3. گذرواژه‌ها با Argon2id یا جایگزین نگهداری‌شده hash شوند؛ کلید خصوصی و credential در log ثبت نشود.
+4. TLS، محافظت CSRF برای نشست cookie، کوکی Secure/HttpOnly/SameSite، rate limit و RBAC الزامی است.
+5. داده‌ها در دیتابیس تراکنشی و با schema migration ذخیره شوند؛ JSON مشترک دیتابیس production نیست.
+6. عملیات adapter تا حد ممکن idempotent باشد و سلامت/قابلیت هر پروتکل را گزارش کند.
+7. مهاجرت V1 عملیاتی صریح، دارای backup و قابل بازگشت باشد؛ هیچ حذف یا ارتقای in-place خودکار انجام نشود.
+
+## نقشه راه
+
+- [x] ایجاد شاخه مستقل V2 و نمونه داشبورد تاریک.
+- [x] مستندسازی اولیه مشخصات، وضعیت نصب و روش اجرای پیش‌نمایش.
+- [ ] استخراج و بررسی payload برنامه V1 و تهیه فهرست route، model، dependency و ایرادها.
+- [ ] نهایی‌کردن قرارداد API، schema دیتابیس و تست migration.
+- [ ] پیاده‌سازی احراز هویت، RBAC، audit log و ثبت Agent.
+- [ ] پیاده‌سازی adapter مربوط به OpenVPN و تست یکپارچه.
+- [ ] پیاده‌سازی Xray برای VLESS، VMess و Trojan و تست یکپارچه.
+- [ ] پیاده‌سازی WireGuard و تست یکپارچه.
+- [ ] اشتراک‌ها، ربات تلگرام و نقش نمایندگی.
+- [ ] backup/restore، مانیتورینگ و نصب‌کننده امن.
+- [ ] تست روی VMهای موقت Ubuntu پیش از هرگونه انتقال به production.
+
+## پوشه‌ها
+
+- `v2/README.md`: مشخصات، نصب پیش‌نمایش، معماری و نقشه راه.
+- `v2/web/index.html`: نمونه داشبورد فارسی.
+- `v2/web/styles.css`: پوسته تاریک و واکنش‌گرایی رابط.
+
+تمام اعداد، کاربران و سرورهای نمایش‌داده‌شده در داشبورد نمونه و ساختگی هستند.
