@@ -148,3 +148,8 @@ journalctl -u batman-panel -n 100 --no-pager
 برای پشتیبانی، پرسش درباره نصب یا تهیه لایسنس:
 
 **[تلگرام پشتیبانی — @shocavpnadmin](https://t.me/shocavpnadmin)**
+
+
+## Batman VPN Panel V2
+
+نسخه دوم در مسیر `v2/` توسعه داده می‌شود. برای وضعیت قابلیت‌ها و نصب Control Plane MVP، ابتدا [راهنمای V2](v2/README.md) و [راهنمای استقرار](v2/DEPLOYMENT.md) را بخوانید. **V2 هنوز جایگزین V1 یا آماده provisioning واقعی پروتکل‌ها نیست.**
