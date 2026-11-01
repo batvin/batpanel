@@ -39,7 +39,6 @@ change_port(){
   echo "PANEL_PORT=$new" >> "$ENV"
   chmod 600 "$ENV"
   dc up -d
-  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then ufw allow "$new/tcp" >/dev/null; fi
   echo "پورت تغییر کرد: http://SERVER-IP:$new"
   echo "فایروال ارائه‌دهنده VPS را نیز بررسی کنید."
 }
