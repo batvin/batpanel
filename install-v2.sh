@@ -100,6 +100,20 @@ EOF
   chmod 600 /root/batman-v2-credentials.txt
 else
   chmod 600 "$INSTALL_DIR/$ENV_FILE"
+  if [[ ! -f /root/batman-v2-credentials.txt ]]; then
+    EXISTING_USERNAME="$(sed -n 's/^ADMIN_USERNAME=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
+    EXISTING_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
+    if [[ -n "$EXISTING_USERNAME" && -n "$EXISTING_PASSWORD" ]]; then
+      cat > /root/batman-v2-credentials.txt <<EOF
+Batman VPN Panel V2
+Username: $EXISTING_USERNAME
+Password: $EXISTING_PASSWORD
+API: http://127.0.0.1:8000
+API docs: http://127.0.0.1:8000/api/docs
+EOF
+      chmod 600 /root/batman-v2-credentials.txt
+    fi
+  fi
 fi
 
 cd "$INSTALL_DIR"
