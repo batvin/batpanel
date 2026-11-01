@@ -159,7 +159,7 @@ echo
 echo "========== INSTALLATION RESULT =========="
 cat "$TMP_DIR/health.json"
 echo
-echo "V2 API:       http://127.0.0.1:8000"
+echo "V2 Panel:     http://127.0.0.1:8000"\necho "V2 API:       http://127.0.0.1:8000/api"
 echo "API docs:     http://127.0.0.1:8000/api/docs (local/SSH tunnel only)"
 echo "Credentials:  /root/batman-v2-credentials.txt"
 if [[ -f /root/batman-v2-credentials.txt ]]; then
@@ -172,4 +172,4 @@ fi
 echo
 echo "Backup directory: $BACKUP_ROOT"
 echo "Batman V1 was left running and unchanged."
-echo "IMPORTANT: this V2 build is a control-plane MVP/API, not yet a replacement for live VPN provisioning or the V1 web UI."
+echo "IMPORTANT: V2 now includes a working API-connected web dashboard, but live VPN provisioning and V1 user migration are not implemented."
