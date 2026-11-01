@@ -8,7 +8,7 @@ BACKUP_ROOT="/var/backups/batman-v2"
 PROJECT="batman-v2"
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
-HEALTH_URL="http://127.0.0.1:8000/api/health"
+
 LOCK_FILE="/var/lock/batman-v2-installer.lock"
 TMP_DIR="$(mktemp -d)"
 PREVIOUS_DIR=""
@@ -77,9 +77,17 @@ fi
 
 if [[ ! -f "$INSTALL_DIR/$ENV_FILE" ]]; then
   log "Creating the first administrator account..."
-  ADMIN_USERNAME="${BATMAN_ADMIN_USERNAME:-admin}"
-  [[ "$ADMIN_USERNAME" =~ ^[a-zA-Z0-9_.-]{3,64}$ ]] || die "BATMAN_ADMIN_USERNAME must be 3-64 letters, digits, dot, underscore or hyphen."
-  ADMIN_PASSWORD="$(openssl rand -hex 20)"
+  read -r -p "نام کاربری مدیر [admin]: " ADMIN_USERNAME
+  ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+  [[ "$ADMIN_USERNAME" =~ ^[a-zA-Z0-9_.-]{3,64}$ ]] || die "نام کاربری باید 3 تا 64 کاراکتر انگلیسی باشد."
+  while true; do
+    read -r -s -p "رمز عبور مدیر (حداقل 14 کاراکتر): " ADMIN_PASSWORD; echo
+    [[ ${#ADMIN_PASSWORD} -ge 14 ]] && break
+    echo "رمز عبور کوتاه است."
+  done
+  read -r -p "پورت پنل [8000]: " PANEL_PORT
+  PANEL_PORT="${PANEL_PORT:-8000}"
+  [[ "$PANEL_PORT" =~ ^[0-9]+$ ]] && ((PANEL_PORT>=1024 && PANEL_PORT<=65535)) || die "پورت باید بین 1024 و 65535 باشد."
   JWT_SECRET="$(openssl rand -hex 48)"
   umask 077
   cat > "$INSTALL_DIR/$ENV_FILE" <<EOF
@@ -88,6 +96,7 @@ ADMIN_PASSWORD=$ADMIN_PASSWORD
 JWT_SECRET=$JWT_SECRET
 TOKEN_TTL_HOURS=8
 DATABASE_URL=sqlite:////data/batman-v2.db
+PANEL_PORT=$PANEL_PORT
 EOF
   chmod 600 "$INSTALL_DIR/$ENV_FILE"
   cat > /root/batman-v2-credentials.txt <<EOF
@@ -116,6 +125,7 @@ EOF
   fi
 fi
 
+install -m 700 "$INSTALL_DIR/scripts/bat-panel" /usr/local/bin/bat-panel
 cd "$INSTALL_DIR"
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 
@@ -134,9 +144,11 @@ docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --b
 log "Waiting for API health check..."
 healthy=0
 for _ in $(seq 1 30); do
-  if curl --fail --silent --max-time 3 "$HEALTH_URL" > "$TMP_DIR/health.json" \
-    && curl --fail --silent --max-time 3 http://127.0.0.1:8000/ | grep -q "ورود به پنل" \
-    && curl --fail --silent --output /dev/null --max-time 3 http://127.0.0.1:8000/assets/styles.css; then
+  PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
+  PANEL_PORT="${PANEL_PORT:-8000}"
+  if curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/api/health" > "$TMP_DIR/health.json" \
+    && curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/" | grep -q "ورود به پنل" \
+    && curl --fail --silent --output /dev/null --max-time 3 "http://127.0.0.1:$PANEL_PORT/assets/styles.css"; then
     healthy=1
     break
   fi
@@ -161,9 +173,10 @@ echo
 echo "========== INSTALLATION RESULT =========="
 cat "$TMP_DIR/health.json"
 echo
-echo "V2 Panel:     http://127.0.0.1:8000"
-echo "V2 API:       http://127.0.0.1:8000/api"
-echo "API docs:     http://127.0.0.1:8000/api/docs (local/SSH tunnel only)"
+PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
+echo "V2 Panel:     http://SERVER-IP:${PANEL_PORT:-8000}"
+echo "V2 API:       http://SERVER-IP:${PANEL_PORT:-8000}/api"
+echo "API docs:     http://SERVER-IP:${PANEL_PORT:-8000}/api/docs"
 echo "Credentials:  /root/batman-v2-credentials.txt"
 if [[ -f /root/batman-v2-credentials.txt ]]; then
   echo
@@ -174,5 +187,7 @@ else
 fi
 echo
 echo "Backup directory: $BACKUP_ROOT"
+echo "Terminal menu: bat-panel"
+echo "Support: https://t.me/shocavpnadmin"
 echo "Batman V1 was left running and unchanged."
 echo "IMPORTANT: V2 now includes a working API-connected web dashboard, but live VPN provisioning and V1 user migration are not implemented."
