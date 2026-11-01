@@ -18,13 +18,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/batvin/batpanel/main/install
 - پورت پنل (۱۰۲۴ تا ۶۵۵۳۵)
 
 پس از نصب:
-- آدرس: `http://SERVER-IP:PORT`
+- آدرس محلی: `http://127.0.0.1:PORT` (با تونل SSH یا reverse proxy امن)
 - مستندات API: `http://SERVER-IP:PORT/api/docs`
 - اطلاعات ورود: `/root/batman-v2-credentials.txt` (دسترسی محدود root)
 - دستور مدیریت ترمینال: `bat-panel`
 - پشتیبانی: [@shocavpnadmin](https://t.me/shocavpnadmin)
 
-اگر UFW فعال باشد، نصب‌کننده قانون TCP پورت پنل را اضافه می‌کند. فایروال پنل ارائه‌دهنده VPS را نیز جداگانه بررسی کنید. برای دسترسی عمومی، HTTPS با reverse proxy توصیه می‌شود؛ از انتشار API بدون TLS روی شبکه عمومی خودداری کنید.
+پنل فقط روی `127.0.0.1` در دسترس است و مستقیماً روی اینترنت منتشر نمی‌شود. برای دسترسی از کامپیوتر خود از تونل SSH استفاده کنید: `ssh -L 8000:127.0.0.1:8000 root@SERVER_IP` و سپس `http://127.0.0.1:8000` را باز کنید. برای دسترسی دائمی، reverse proxy با HTTPS تنظیم کنید.
 
 ## منوی مدیریتی
 
