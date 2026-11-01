@@ -164,7 +164,9 @@ for _ in $(seq 1 30); do
   PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
   PANEL_PORT="${PANEL_PORT:-8000}"
   if curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/api/health" > "$TMP_DIR/health.json" \
-    && curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/" | grep -q "BAT-PANEL" \
+    && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$TMP_DIR/health.json" \
+    && curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/" > "$TMP_DIR/dashboard.html" \
+    && grep -Eiq '<!doctype[[:space:]]+html|<html([[:space:]>])' "$TMP_DIR/dashboard.html" \
     && curl --fail --silent --output /dev/null --max-time 3 "http://127.0.0.1:$PANEL_PORT/assets/styles.css"; then
     healthy=1
     break
