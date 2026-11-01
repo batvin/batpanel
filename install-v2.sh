@@ -105,8 +105,8 @@ BAT-PANEL V2
 Username: $ADMIN_USERNAME
 Password: $ADMIN_PASSWORD
 Panel: http://127.0.0.1:$PANEL_PORT
-API: http://SERVER-IP:$PANEL_PORT/api
-API docs: http://SERVER-IP:$PANEL_PORT/api/docs
+API: http://127.0.0.1:$PANEL_PORT/api
+API docs: http://127.0.0.1:$PANEL_PORT/api/docs
 EOF
   chmod 600 /root/batman-v2-credentials.txt
 else
