@@ -104,7 +104,7 @@ EOF
 BAT-PANEL V2
 Username: $ADMIN_USERNAME
 Password: $ADMIN_PASSWORD
-Panel: http://SERVER-IP:$PANEL_PORT
+Panel: http://127.0.0.1:$PANEL_PORT
 API: http://SERVER-IP:$PANEL_PORT/api
 API docs: http://SERVER-IP:$PANEL_PORT/api/docs
 EOF
@@ -189,7 +189,7 @@ echo "========== INSTALLATION RESULT =========="
 cat "$TMP_DIR/health.json"
 echo
 PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
-echo "V2 Panel:     http://SERVER-IP:${PANEL_PORT:-8000}"
+echo "V2 Panel:     http://127.0.0.1:${PANEL_PORT:-8000} (local only)"
 echo "V2 API:       http://SERVER-IP:${PANEL_PORT:-8000}/api"
 echo "API docs:     http://SERVER-IP:${PANEL_PORT:-8000}/api/docs"
 echo "Credentials:  /root/batman-v2-credentials.txt"
@@ -204,6 +204,6 @@ echo
 echo "Backup directory: $BACKUP_ROOT"
 echo "Terminal menu: bat-panel"
 echo "Support: https://t.me/shocavpnadmin"
-echo "Firewall: TCP $PANEL_PORT (UFW rule added only if UFW was active). Check provider firewall too."
+echo "Network: panel is bound to 127.0.0.1; use SSH tunnel or configure HTTPS reverse proxy."
 echo "Batman V1 was left running and unchanged."
 echo "IMPORTANT: V2 now includes a working API-connected web dashboard, but live VPN provisioning and V1 user migration are not implemented."
