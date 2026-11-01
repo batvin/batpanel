@@ -58,22 +58,22 @@ http://SERVER_IP:3000
 
 ## تنظیمات نصب
 
-برای تغییر پورت پنل:
+برای تغییر پورت پنل، همان نصب سریع را با متغیر محیطی اجرا کنید:
 
 ```bash
-PANEL_PORT=3100 bash batman-install.sh
+curl -fsSL https://raw.githubusercontent.com/batvin/batpanel/main/install.sh | PANEL_PORT=3100 bash
 ```
 
 برای استفاده از OpenVPN روی TCP پورت 443:
 
 ```bash
-VPN_PORT=443 VPN_PROTO=tcp bash batman-install.sh
+curl -fsSL https://raw.githubusercontent.com/batvin/batpanel/main/install.sh | VPN_PORT=443 VPN_PROTO=tcp bash
 ```
 
 برای تعیین IP یا دامنه سرور:
 
 ```bash
-SERVER_HOST=vpn.example.com bash batman-install.sh
+curl -fsSL https://raw.githubusercontent.com/batvin/batpanel/main/install.sh | SERVER_HOST=vpn.example.com bash
 ```
 
 ## مدیریت پنل
@@ -86,6 +86,12 @@ batman-panel reset-admin  # بازنشانی رمز مدیر
 ```
 
 ## حذف پنل
+
+برای اجرای دستورات حذف، ابتدا فایل نصب اصلی را دریافت کنید:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/batvin/batpanel/main/batman-install.sh -o batman-install.sh
+```
 
 حذف برنامه با نگه‌داشتن داده‌ها و گواهی‌ها:
 
