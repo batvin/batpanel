@@ -78,7 +78,7 @@ while true; do menu; done
   read -r -s -p "تکرار رمز عبور: " confirm; echo
   [[ "$new_pass" == "$confirm" ]] || { echo "رمزها یکسان نیستند."; return 1; }
   backup
-  ADMIN_NEW_USER="$new_user" ADMIN_NEW_PASS="$new_pass" dc exec -T api python - <<'PY'
+  dc exec -T -e "ADMIN_NEW_USER=$new_user" -e "ADMIN_NEW_PASS=$new_pass" api python - <<'PY'
 import os
 from sqlalchemy import select
 from app.main import SessionLocal, Admin, hash_password
