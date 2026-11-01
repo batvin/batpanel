@@ -100,15 +100,19 @@ PANEL_PORT=$PANEL_PORT
 EOF
   chmod 600 "$INSTALL_DIR/$ENV_FILE"
   cat > /root/batman-v2-credentials.txt <<EOF
-Batman VPN Panel V2
+BAT-PANEL V2
 Username: $ADMIN_USERNAME
 Password: $ADMIN_PASSWORD
-API: http://127.0.0.1:8000
-API docs: http://127.0.0.1:8000/api/docs
+Panel: http://SERVER-IP:$PANEL_PORT
+API: http://SERVER-IP:$PANEL_PORT/api
+API docs: http://SERVER-IP:$PANEL_PORT/api/docs
 EOF
   chmod 600 /root/batman-v2-credentials.txt
 else
   chmod 600 "$INSTALL_DIR/$ENV_FILE"
+  if ! grep -q '^PANEL_PORT=' "$INSTALL_DIR/$ENV_FILE"; then
+    echo "PANEL_PORT=8000" >> "$INSTALL_DIR/$ENV_FILE"
+  fi
   if [[ ! -f /root/batman-v2-credentials.txt ]]; then
     EXISTING_USERNAME="$(sed -n 's/^ADMIN_USERNAME=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
     EXISTING_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' "$INSTALL_DIR/$ENV_FILE" | head -n1)"
@@ -147,7 +151,7 @@ for _ in $(seq 1 30); do
   PANEL_PORT="$(sed -n 's/^PANEL_PORT=//p' "$INSTALL_DIR/$ENV_FILE" | tail -n1)"
   PANEL_PORT="${PANEL_PORT:-8000}"
   if curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/api/health" > "$TMP_DIR/health.json" \
-    && curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/" | grep -q "ورود به پنل" \
+    && curl --fail --silent --max-time 3 "http://127.0.0.1:$PANEL_PORT/" | grep -q "BAT-PANEL" \
     && curl --fail --silent --output /dev/null --max-time 3 "http://127.0.0.1:$PANEL_PORT/assets/styles.css"; then
     healthy=1
     break
