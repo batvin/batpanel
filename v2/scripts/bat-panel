@@ -39,7 +39,7 @@ change_port(){
   echo "PANEL_PORT=$new" >> "$ENV"
   chmod 600 "$ENV"
   dc up -d
-  echo "پورت تغییر کرد: http://SERVER-IP:$new"
+  echo "پورت تغییر کرد: http://127.0.0.1:$new"
   echo "فایروال ارائه‌دهنده VPS را نیز بررسی کنید."
 }
 
@@ -128,7 +128,7 @@ menu(){
     7) update_panel ;;
     8) change_port ;;
     9) change_credentials ;;
-    10) local p; p="$(panel_port)"; echo "پنل: http://SERVER-IP:$p"; echo "پشتیبانی: https://t.me/shocavpnadmin"; echo "فایل تنظیمات: $ENV"; echo "اطلاعات ورود: /root/batman-v2-credentials.txt" ;;
+    10) local p; p="$(panel_port)"; echo "پنل: http://127.0.0.1:$p"; echo "پشتیبانی: https://t.me/shocavpnadmin"; echo "فایل تنظیمات: $ENV"; echo "اطلاعات ورود: /root/batman-v2-credentials.txt" ;;
     0) exit 0 ;;
     *) echo "گزینه نامعتبر است." ;;
   esac
