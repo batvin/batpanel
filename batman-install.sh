@@ -110,12 +110,8 @@ if [ -f "$APP_DIR/app.js" ] && [ ! -f "$APP_DIR/server.js" ]; then
   rm -rf "$APP_DIR"
   ok "پنل قدیمی حذف شد (پشتیبان: /root/batman-old-backup-$TS.tar.gz)"
 fi
-if systemctl list-unit-files 2>/dev/null | grep -q '^mongod.service'; then
-  if systemctl is-active --quiet mongod; then
-    systemctl disable --now mongod >/dev/null 2>&1
-    ok "MongoDB خاموش و غیرفعال شد (دیگر لازم نیست و رم آزاد می‌شود؛ حذف نشد)"
-  fi
-fi
+# Do not disable a host-wide MongoDB service during panel installation.
+# It may be shared by unrelated applications; leave service ownership to the operator.
 if [ -f "$OVPN_DIR/server.conf" ] && ! grep -q 'فایل خودکار پنل' "$OVPN_DIR/server.conf"; then
   mv "$OVPN_DIR/server.conf" "$OVPN_DIR/server.conf.bak-$TS"
   ok "server.conf قبلی به server.conf.bak-$TS منتقل شد"
