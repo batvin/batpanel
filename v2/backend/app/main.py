@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status\nfrom fastapi.responses import FileResponse\nfrom fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, select
@@ -147,7 +147,7 @@ class CustomerInput(BaseModel):
     expires_at: datetime
     node_id: int | None = None
 
-app = FastAPI(title="Batman VPN Panel API", version=APP_VERSION, docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title="Batman VPN Panel API", version=APP_VERSION, docs_url="/api/docs", redoc_url=None)\napp.mount("/assets", StaticFiles(directory="/app/web"), name="assets")
 
 @app.on_event("startup")
 def startup():
