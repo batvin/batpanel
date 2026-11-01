@@ -151,10 +151,6 @@ if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
     sh -c "tar czf /backup/batman-v2-data-$(date +%Y%m%d-%H%M%S).tgz -C /data ."
 fi
 
-if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-  ufw allow "$PANEL_PORT/tcp" >/dev/null
-fi
-
 log "Building and starting BAT-PANEL V2..."
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
 
