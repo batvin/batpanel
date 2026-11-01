@@ -38,11 +38,11 @@ curl -fsS http://127.0.0.1:8000/api/health
 
 ```bash
 docker compose -f v2/docker-compose.yml --env-file v2/.env -p batman-v2 stop
-docker run --rm -v batpanel_batman_v2_data:/data -v "$PWD":/backup alpine tar czf /backup/batman-v2-data-backup.tgz -C /data .
+docker run --rm -v batman-v2_batman_v2_data:/data -v "$PWD":/backup alpine tar czf /backup/batman-v2-data-backup.tgz -C /data .
 docker compose -f v2/docker-compose.yml --env-file v2/.env -p batman-v2 start
 ```
 
-نام volume ممکن است با توجه به نام پوشه/پروژه Docker متفاوت باشد؛ قبل از backup با `docker volume ls` آن را بررسی کنید.
+نام volume در نصب‌کننده فعلی `batman-v2_batman_v2_data` است. قبل از backup آن را با `docker volume ls` بررسی کنید.
 
 ## توقف
 

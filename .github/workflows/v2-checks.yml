@@ -22,4 +22,4 @@ jobs:
       - name: Compile backend
         run: python -m compileall -q v2/backend/app
       - name: Validate Docker Compose
-        run: docker compose -f v2/docker-compose.yml config --quiet
+        run: touch v2/.env && docker compose -f v2/docker-compose.yml config --quiet
