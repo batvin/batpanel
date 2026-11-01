@@ -23,7 +23,9 @@ jobs:
           python-version: "3.12"
       - name: Validate installer syntax
         run: bash -n install-v2.sh
-      - name: Validate BAT-PANEL CLI syntax\n        run: bash -n v2/scripts/bat-panel\n      - name: Compile backend
+      - name: Validate BAT-PANEL CLI syntax
+        run: bash -n v2/scripts/bat-panel
+      - name: Compile backend
         run: python -m compileall -q v2/backend/app
       - name: Validate Docker Compose
         run: touch v2/.env && docker compose -f v2/docker-compose.yml config --quiet
