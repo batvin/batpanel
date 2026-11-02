@@ -582,7 +582,6 @@ def protocols(admin: Admin = Depends(current_admin)):
         {"id": "vless", "name": "VLESS", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
         {"id": "vmess", "name": "VMess", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
         {"id": "trojan", "name": "Trojan", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
-        ,
         {"id": "openvpn", "name": "OpenVPN", "configured": False, "status": "engine_pending", "description": "OpenVPN و Agent هنوز نصب نشده‌اند."},
     ]
 
