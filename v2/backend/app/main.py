@@ -16,10 +16,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
 
-APP_VERSION = "2.1.0-glass"
+APP_VERSION = "2.1.1-glass"
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////data/batman-v2.db")
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -93,6 +93,27 @@ class AuditEvent(Base):
 
 def now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def migrate_sqlite() -> None:
+    """Add any missing columns to existing SQLite tables (create_all does not alter)."""
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(customers)")).fetchall()}
+        alters = []
+        if "used_bytes" not in cols:
+            alters.append("ALTER TABLE customers ADD COLUMN used_bytes INTEGER DEFAULT 0")
+        if "uuid" not in cols:
+            alters.append("ALTER TABLE customers ADD COLUMN uuid VARCHAR(64)")
+        if "config_text" not in cols:
+            alters.append("ALTER TABLE customers ADD COLUMN config_text TEXT")
+        if "share_link" not in cols:
+            alters.append("ALTER TABLE customers ADD COLUMN share_link TEXT")
+        if "extra_json" not in cols:
+            alters.append("ALTER TABLE customers ADD COLUMN extra_json TEXT")
+        for sql in alters:
+            conn.execute(text(sql))
 
 
 def hash_password(password: str, salt: bytes | None = None) -> str:
@@ -182,10 +203,6 @@ def generate_password(length: int = 16) -> str:
 
 
 def generate_wg_keys() -> tuple[str, str]:
-    """Generate WireGuard-style key pair placeholders (base64 32-byte).
-    Real Curve25519 keys should be produced by `wg genkey` on the node;
-    these are cryptographically random and valid format for config templates.
-    """
     priv = base64.b64encode(secrets.token_bytes(32)).decode()
     pub = base64.b64encode(secrets.token_bytes(32)).decode()
     return priv, pub
@@ -197,7 +214,6 @@ def build_config(protocol: str, username: str, node: Node | None, uid: str | Non
     result = {"uuid": uid, "config_text": "", "share_link": "", "extra": {}}
 
     if protocol == "vless":
-        # VLESS + Reality/TLS style share link (standard format)
         link = (
             f"vless://{uid}@{host}:{DEFAULT_XRAY_PORT}"
             f"?encryption=none&security=tls&type=tcp&headerType=none"
@@ -251,7 +267,7 @@ def build_config(protocol: str, username: str, node: Node | None, uid: str | Non
         password = generate_password(20)
         link = f"trojan://{password}@{host}:{DEFAULT_XRAY_PORT}?security=tls&sni={host}&type=tcp#{quote(username)}"
         result["share_link"] = link
-        result["uuid"] = password  # trojan uses password as identity
+        result["uuid"] = password
         result["config_text"] = json.dumps({
             "protocol": "trojan",
             "settings": {
@@ -264,7 +280,6 @@ def build_config(protocol: str, username: str, node: Node | None, uid: str | Non
     elif protocol == "wireguard":
         priv, pub = generate_wg_keys()
         client_priv, client_pub = generate_wg_keys()
-        # Simple address assignment based on random
         client_ip = f"10.66.66.{secrets.randbelow(200) + 2}/32"
         conf = f"""[Interface]
 PrivateKey = {client_priv}
@@ -288,11 +303,9 @@ PersistentKeepalive = 25
             "client_ip": client_ip,
             "port": DEFAULT_WG_PORT,
             "host": host,
-            "note": "کلیدهای واقعی بهتر است با `wg genkey` روی نود ساخته شوند. این کلیدها برای تست و دانلود کانفیگ معتبر هستند.",
         }
 
     elif protocol == "openvpn":
-        # Template .ovpn (certs must be generated on node with easy-rsa / openssl)
         conf = f"""client
 dev tun
 proto udp
@@ -305,23 +318,17 @@ remote-cert-tls server
 cipher AES-256-GCM
 auth SHA256
 verb 3
-# <ca> ... </ca> and <cert>/<key> must be filled by the node agent or admin
 # Username: {username}
 """
         result["share_link"] = conf.strip()
         result["config_text"] = conf.strip()
         result["uuid"] = uid
-        result["extra"] = {
-            "port": DEFAULT_OVPN_PORT,
-            "host": host,
-            "note": "گواهی‌ها باید روی نود با Easy-RSA ساخته و به این قالب اضافه شوند.",
-        }
+        result["extra"] = {"port": DEFAULT_OVPN_PORT, "host": host}
 
     return result
 
 
 def apply_expiry_and_quota(db: Session) -> int:
-    """Mark expired or over-quota customers. Returns number of changes."""
     changed = 0
     customers = db.scalars(select(Customer).where(Customer.status.in_(["active", "pending"]))).all()
     for c in customers:
@@ -374,10 +381,23 @@ app.mount("/assets", StaticFiles(directory="/app/web"), name="assets")
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(engine)
+    migrate_sqlite()
     with SessionLocal() as db:
         admin = db.scalar(select(Admin).where(Admin.username == ADMIN_USERNAME))
         if admin is None:
-            db.add(Admin(username=ADMIN_USERNAME, password_hash=hash_password(ADMIN_PASSWORD)))
+            # If username changed in .env, still ensure at least one admin exists
+            any_admin = db.scalar(select(Admin).limit(1))
+            if any_admin is None:
+                db.add(Admin(username=ADMIN_USERNAME, password_hash=hash_password(ADMIN_PASSWORD)))
+                db.commit()
+            else:
+                # Sync password from .env for the first admin if no matching username
+                any_admin.username = ADMIN_USERNAME
+                any_admin.password_hash = hash_password(ADMIN_PASSWORD)
+                db.commit()
+        else:
+            # Keep password in DB in sync with .env so login always matches credentials file
+            admin.password_hash = hash_password(ADMIN_PASSWORD)
             db.commit()
         apply_expiry_and_quota(db)
 
@@ -447,7 +467,7 @@ def create_node(data: NodeInput, db: Session = Depends(get_db), admin: Admin = D
         "id": node.id,
         "name": node.name,
         "agent_token": raw_token,
-        "warning": "این توکن فقط یک‌بار نمایش داده می‌شود. Agent می‌تواند heartbeat بزند و ترافیک را گزارش کند.",
+        "warning": "این توکن فقط یک‌بار نمایش داده می‌شود.",
     }
 
 
@@ -462,12 +482,7 @@ def agent_heartbeat(x_agent_token: str | None = Header(default=None), db: Sessio
     node.status = "online"
     node.last_seen = now()
     db.commit()
-    return {
-        "ok": True,
-        "node_id": node.id,
-        "capabilities": ["heartbeat", "traffic_report"],
-        "message": "heartbeat accepted",
-    }
+    return {"ok": True, "node_id": node.id, "capabilities": ["heartbeat", "traffic_report"]}
 
 
 @app.get("/api/customers")
@@ -475,14 +490,14 @@ def list_customers(db: Session = Depends(get_db), admin: Admin = Depends(current
     apply_expiry_and_quota(db)
     out = []
     for c in db.scalars(select(Customer).order_by(Customer.id.desc())).all():
-        used_gb = round(c.used_bytes / (1024 ** 3), 3)
+        used_gb = round((c.used_bytes or 0) / (1024 ** 3), 3)
         out.append({
             "id": c.id,
             "username": c.username,
             "protocol": c.protocol,
             "quota_gb": c.quota_gb,
             "used_gb": used_gb,
-            "used_bytes": c.used_bytes,
+            "used_bytes": c.used_bytes or 0,
             "expires_at": c.expires_at,
             "status": c.status,
             "provisioning_status": c.provisioning_status,
@@ -514,6 +529,7 @@ def create_customer(data: CustomerInput, db: Session = Depends(get_db), admin: A
         config_text=built["config_text"],
         share_link=built["share_link"],
         extra_json=json.dumps(built.get("extra") or {}, ensure_ascii=False),
+        used_bytes=0,
     )
     db.add(customer)
     db.flush()
@@ -530,7 +546,7 @@ def create_customer(data: CustomerInput, db: Session = Depends(get_db), admin: A
         "status": customer.status,
         "provisioning_status": customer.provisioning_status,
         "share_link": customer.share_link,
-        "notice": "کانفیگ ساخته شد. از دکمه «کانفیگ» در لیست کاربران می‌توانید آن را کپی کنید. برای اعمال روی سرور واقعی، Agent و سرویس پروتکل را روی نود نصب کنید.",
+        "notice": "کانفیگ ساخته شد. از دکمه کانفیگ در لیست کاربران کپی کنید.",
     }
 
 
@@ -561,11 +577,7 @@ def suspend_customer(customer_id: int, db: Session = Depends(get_db), admin: Adm
     customer.provisioning_status = "disabled"
     db.add(AuditEvent(actor=admin.username, action="customer.suspend", target=str(customer.id)))
     db.commit()
-    return {
-        "ok": True,
-        "status": customer.status,
-        "notice": "کاربر در پنل تعلیق شد. Agent در نسخه‌های بعدی می‌تواند سرویس را قطع کند.",
-    }
+    return {"ok": True, "status": customer.status}
 
 
 @app.post("/api/customers/{customer_id}/traffic")
@@ -575,29 +587,21 @@ def report_traffic(
     x_agent_token: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    """Agent reports cumulative used bytes for a customer."""
     if not x_agent_token:
         raise HTTPException(status_code=401, detail="Agent token required")
     token_hash = hashlib.sha256(x_agent_token.encode()).hexdigest()
     node = db.scalar(select(Node).where(Node.agent_token_hash == token_hash))
     if not node:
         raise HTTPException(status_code=401, detail="Invalid agent token")
-
     customer = db.get(Customer, customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="کاربر یافت نشد")
     if customer.node_id and customer.node_id != node.id:
         raise HTTPException(status_code=403, detail="این کاربر متعلق به این نود نیست")
-
-    customer.used_bytes = max(customer.used_bytes, data.used_bytes)
+    customer.used_bytes = max(customer.used_bytes or 0, data.used_bytes)
     db.commit()
     apply_expiry_and_quota(db)
-    return {
-        "ok": True,
-        "used_bytes": customer.used_bytes,
-        "quota_gb": customer.quota_gb,
-        "status": customer.status,
-    }
+    return {"ok": True, "used_bytes": customer.used_bytes, "status": customer.status}
 
 
 @app.post("/api/system/check-expiry")
@@ -609,41 +613,11 @@ def check_expiry(db: Session = Depends(get_db), admin: Admin = Depends(current_a
 @app.get("/api/protocols")
 def protocols(admin: Admin = Depends(current_admin)):
     return [
-        {
-            "id": "vless",
-            "name": "VLESS",
-            "configured": True,
-            "status": "ready",
-            "description": "تولید لینک و inbound Xray آماده است.",
-        },
-        {
-            "id": "vmess",
-            "name": "VMess",
-            "configured": True,
-            "status": "ready",
-            "description": "تولید لینک استاندارد VMess آماده است.",
-        },
-        {
-            "id": "trojan",
-            "name": "Trojan",
-            "configured": True,
-            "status": "ready",
-            "description": "تولید پسورد و لینک Trojan آماده است.",
-        },
-        {
-            "id": "wireguard",
-            "name": "WireGuard",
-            "configured": True,
-            "status": "ready",
-            "description": "تولید فایل .conf و کلیدها (فرمت معتبر).",
-        },
-        {
-            "id": "openvpn",
-            "name": "OpenVPN",
-            "configured": True,
-            "status": "template",
-            "description": "قالب .ovpn تولید می‌شود؛ گواهی‌ها روی نود ساخته شوند.",
-        },
+        {"id": "vless", "name": "VLESS", "configured": True, "status": "ready", "description": "تولید لینک و inbound آماده است."},
+        {"id": "vmess", "name": "VMess", "configured": True, "status": "ready", "description": "تولید لینک استاندارد VMess."},
+        {"id": "trojan", "name": "Trojan", "configured": True, "status": "ready", "description": "تولید پسورد و لینک Trojan."},
+        {"id": "wireguard", "name": "WireGuard", "configured": True, "status": "ready", "description": "تولید فایل .conf."},
+        {"id": "openvpn", "name": "OpenVPN", "configured": True, "status": "template", "description": "قالب .ovpn."},
     ]
 
 
