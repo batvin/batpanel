@@ -4,7 +4,7 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCE = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
-COMPOSE = (ROOT.parent / "docker-compose.yml").read_text(encoding="utf-8")
+COMPOSE = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
 
 class CoreGuardrailTests(unittest.TestCase):
