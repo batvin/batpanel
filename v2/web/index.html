@@ -1,26 +1,355 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BAT-PANEL | Batman VPN</title><link rel="stylesheet" href="/assets/styles.css"></head><body>
-<div id="login" class="login-wrap"><form id="lf" class="login-card"><div class="brand-mark">B</div><h1>ورود به BAT-PANEL</h1><label>نام کاربری<input id="u" required autocomplete="username"></label><label>رمز عبور<input id="p" type="password" required autocomplete="current-password"></label><button class="primary full">ورود</button><p id="err" class="error"></p></form></div>
-<div id="app" class="shell hidden"><aside class="sidebar"><div class="brand"><span class="brand-mark">B</span><span><b>BATMAN</b><small>BAT-PANEL · VPN CONTROL</small></span></div><nav><button class="nav active" data-p="overview">نمای کلی</button><button class="nav" data-p="customers">کاربران</button><button class="nav" data-p="nodes">سرورها</button><button class="nav" data-p="protocols">پروتکل‌ها</button></nav><div class="side-bottom"><i class="pulse"></i><div><b>وضعیت پنل</b><small id="health">متصل</small></div></div></aside>
-<main class="main"><header class="topbar"><div><div class="eyebrow">BAT-PANEL <span>·</span> BATMAN VPN CONTROL</div><h1 id="title">داشبورد مدیریت</h1><p>مدیریت اطلاعات ثبت‌شده در پنل</p></div><div class="top-actions"><span id="who"></span><button id="reload" class="secondary">به‌روزرسانی</button><button id="out" class="secondary">خروج</button></div></header><div id="msg" class="notice hidden"></div>
-<section id="overview" class="page"><div class="welcome"><h2>خوش آمدید</h2><p>آمار زنده پایگاه داده Batman V2</p></div><div class="notice warning">این نسخه فعلاً رکوردهای مدیریتی را ثبت می‌کند؛ ساخت کانفیگ و اعمال تغییرات روی سرویس VPN هنوز فعال نشده است.</div><div class="stats"><article class="stat"><span>کل کاربران</span><strong id="total">—</strong></article><article class="stat"><span>فعال</span><strong id="active">—</strong></article><article class="stat"><span>سرورها</span><strong id="nodes">—</strong></article><article class="stat"><span>در انتظار</span><strong id="pending">—</strong></article></div><div class="panel"><h3>آخرین کاربران</h3><div id="recent" class="table-wrap"></div></div></section>
-<section id="customers" class="page hidden"><div class="toolbar"><h2>کاربران</h2><button id="addc" class="primary">＋ افزودن کاربر</button></div><form id="cf" class="panel form-grid hidden"><label>نام کاربری<input id="cu" required pattern="[A-Za-z0-9_.-]{3,64}"></label><label>پروتکل<select id="cp"><option>openvpn</option><option>vless</option><option>vmess</option><option>trojan</option><option>wireguard</option></select></label><label>حجم GB<input id="cq" type="number" min="1" value="50"></label><label>انقضا<input id="ce" type="datetime-local" required></label><label>سرور<select id="cn"><option value="">بدون سرور</option></select></label><button class="primary">ثبت رکورد</button><p class="form-note">ثبت رکورد به معنی ساخت کانفیگ فعال نیست.</p></form><div class="panel"><div id="ct" class="table-wrap"></div></div></section>
-<section id="nodes-page" class="page hidden"><div class="toolbar"><h2>سرورها</h2><button id="addn" class="primary">＋ افزودن سرور</button></div><form id="nf" class="panel form-grid hidden"><label>نام سرور<input id="nn" required></label><label>آدرس یا IP<input id="na" required></label><button class="primary">ثبت سرور</button></form><div class="panel"><div id="nt" class="table-wrap"></div></div></section>
-<section id="protocols" class="page hidden"><h2>پروتکل‌ها</h2><div id="pt" class="protocol-cards"></div></section><footer><b>BAT-PANEL V2</b> <span><a href="https://github.com/MHSanaei/3x-ui/releases" target="_blank" rel="noopener noreferrer">دانلودها و Releases رسمی 3x-ui</a></span> <span>تلگرام پشتیبانی: <a href="https://t.me/shocavpnadmin" target="_blank" rel="noopener noreferrer">@shocavpnadmin</a></span></footer></main></div>
-<div id="modal" class="modal hidden"><div class="modal-card"><button id="mc" class="modal-x">×</button><h3>توکن Agent (فقط یک‌بار نمایش)</h3><pre id="mt"></pre><button id="copy" class="primary full">کپی</button></div></div>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BAT-PANEL | Batman VPN</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<div id="login" class="login-wrap">
+  <form id="lf" class="login-card">
+    <div class="brand-mark">B</div>
+    <h1>ورود به BAT-PANEL</h1>
+    <p>پنل مدیریت VPN با رابط شیشه‌ای</p>
+    <label>نام کاربری<input id="u" required autocomplete="username"></label>
+    <label>رمز عبور<input id="p" type="password" required autocomplete="current-password"></label>
+    <button class="primary full">ورود</button>
+    <p id="err" class="error"></p>
+  </form>
+</div>
+
+<div id="app" class="shell hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">B</span>
+      <span><b>BATMAN</b><small>BAT-PANEL · VPN CONTROL</small></span>
+    </div>
+    <nav>
+      <button class="nav active" data-p="overview">نمای کلی</button>
+      <button class="nav" data-p="customers">کاربران</button>
+      <button class="nav" data-p="nodes">سرورها</button>
+      <button class="nav" data-p="protocols">پروتکل‌ها</button>
+    </nav>
+    <div class="side-bottom">
+      <i class="pulse"></i>
+      <div><b>وضعیت پنل</b><small id="health">متصل</small></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">BAT-PANEL <span>·</span> BATMAN VPN CONTROL</div>
+        <h1 id="title">داشبورد مدیریت</h1>
+        <p>مدیریت کاربران، سرورها و کانفیگ‌های VPN</p>
+      </div>
+      <div class="top-actions">
+        <span id="who"></span>
+        <button id="reload" class="secondary">به‌روزرسانی</button>
+        <button id="out" class="secondary">خروج</button>
+      </div>
+    </header>
+
+    <div id="msg" class="notice hidden"></div>
+
+    <section id="overview" class="page">
+      <div class="welcome">
+        <h2>خوش آمدید</h2>
+        <p>آمار زنده و وضعیت سرویس‌های Batman V2</p>
+      </div>
+      <div class="notice warning" id="sys-notice">کانفیگ‌ها تولید می‌شوند. برای اعمال واقعی روی نودها، Agent و سرویس‌های VPN را نصب کنید.</div>
+      <div class="stats">
+        <article class="stat">
+          <span>کل کاربران</span>
+          <strong id="total">—</strong>
+          <div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+        <article class="stat">
+          <span>فعال</span>
+          <strong id="active">—</strong>
+          <div class="spark green"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+        <article class="stat">
+          <span>سرورها</span>
+          <strong id="nodes">—</strong>
+          <div class="spark cyan"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+        <article class="stat">
+          <span>در انتظار / منقضی</span>
+          <strong id="pending">—</strong>
+          <div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+      </div>
+      <div class="panel">
+        <h3>آخرین کاربران</h3>
+        <div id="recent" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section id="customers" class="page hidden">
+      <div class="toolbar">
+        <h2>کاربران</h2>
+        <button id="addc" class="primary">＋ افزودن کاربر</button>
+      </div>
+      <form id="cf" class="panel form-grid hidden">
+        <label>نام کاربری<input id="cu" required pattern="[A-Za-z0-9_.-]{3,64}"></label>
+        <label>پروتکل
+          <select id="cp">
+            <option value="vless">VLESS</option>
+            <option value="vmess">VMess</option>
+            <option value="trojan">Trojan</option>
+            <option value="openvpn">OpenVPN</option>
+            <option value="wireguard">WireGuard</option>
+          </select>
+        </label>
+        <label>حجم GB<input id="cq" type="number" min="1" value="50"></label>
+        <label>انقضا<input id="ce" type="datetime-local" required></label>
+        <label>سرور<select id="cn"><option value="">بدون سرور</option></select></label>
+        <button class="primary">ثبت و ساخت کانفیگ</button>
+        <p class="form-note">با ثبت، کانفیگ واقعی پروتکل تولید و ذخیره می‌شود. اعمال روی نود نیاز به Agent دارد.</p>
+      </form>
+      <div class="panel">
+        <div id="ct" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section id="nodes-page" class="page hidden">
+      <div class="toolbar">
+        <h2>سرورها</h2>
+        <button id="addn" class="primary">＋ افزودن سرور</button>
+      </div>
+      <form id="nf" class="panel form-grid hidden">
+        <label>نام سرور<input id="nn" required></label>
+        <label>آدرس یا IP<input id="na" required></label>
+        <button class="primary">ثبت سرور</button>
+      </form>
+      <div class="panel">
+        <div id="nt" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section id="protocols" class="page hidden">
+      <h2 style="margin-bottom:18px">پروتکل‌ها</h2>
+      <div id="pt" class="protocol-cards"></div>
+    </section>
+
+    <footer>
+      <b>BAT-PANEL V2</b>
+      <span><a href="https://github.com/batvin/batpanel" target="_blank" rel="noopener">GitHub</a></span>
+      <span>تلگرام پشتیبانی: <a href="https://t.me/shocavpnadmin" target="_blank" rel="noopener">@shocavpnadmin</a></span>
+    </footer>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <button id="mc" class="modal-x">×</button>
+    <h3 id="modal-title">جزئیات</h3>
+    <pre id="mt"></pre>
+    <div class="config-actions">
+      <button id="copy" class="primary">کپی</button>
+      <button id="mc2" class="secondary">بستن</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];let t=localStorage.getItem("batman_token")||"",cs=[],ns=[];
-function esc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-async function api(path,opt={}){let h={"Content-Type":"application/json"};if(t)h.Authorization="Bearer "+t;let r=await fetch("/api"+path,{...opt,headers:h}),d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401)logout();throw Error(d.detail||"خطای درخواست")}return d}
-function logout(){t="";localStorage.removeItem("batman_token");$("#login").classList.remove("hidden");$("#app").classList.add("hidden")}
-function msg(x){$("#msg").textContent=x;$("#msg").classList.remove("hidden");setTimeout(()=>$("#msg").classList.add("hidden"),5000)}
-$("#lf").onsubmit=async e=>{e.preventDefault();try{let d=await api("/auth/login",{method:"POST",body:JSON.stringify({username:$("#u").value,password:$("#p").value})});t=d.access_token;localStorage.setItem("batman_token",t);await boot()}catch(x){$("#err").textContent=x.message}};
-function date(x){let d=new Date(x);return x&&!isNaN(d)?d.toLocaleString("fa-IR"):"—"}
-function tbl(a){if(!a.length)return'<div class="empty">هنوز موردی ثبت نشده است.</div>';return'<table><thead><tr><th>شناسه</th><th>نام</th><th>پروتکل</th><th>حجم</th><th>انقضا</th><th>وضعیت</th></tr></thead><tbody>'+a.map(x=>'<tr><td>'+x.id+'</td><td>'+esc(x.username)+'</td><td>'+esc((x.protocol||"").toUpperCase())+'</td><td>'+x.quota_gb+' GB</td><td>'+date(x.expires_at)+'</td><td>'+esc(x.status)+' / '+esc(x.provisioning_status)+'</td></tr>').join("")+'</tbody></table>'}
-async function load(){let [d,c,n,p]=await Promise.all([api("/dashboard"),api("/customers"),api("/nodes"),api("/protocols")]);cs=c;ns=n;$("#total").textContent=d.customers_total;$("#active").textContent=d.customers_active;$("#nodes").textContent=d.nodes_total+" (آنلاین "+d.nodes_online+")";$("#pending").textContent=d.customers_pending;$("#recent").innerHTML=tbl(c.slice(0,5));$("#ct").innerHTML=tbl(c);$("#cn").innerHTML='<option value="">بدون سرور</option>'+n.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join("");$("#nt").innerHTML=n.length?'<table><thead><tr><th>نام</th><th>آدرس</th><th>وضعیت</th><th>آخرین ارتباط</th></tr></thead><tbody>'+n.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.address)+'</td><td>'+esc(x.status)+'</td><td>'+date(x.last_seen)+'</td></tr>').join("")+'</tbody></table>':'<div class="empty">هنوز سروری ثبت نشده است.</div>';$("#pt").innerHTML=p.map(x=>'<article class="panel protocol-card"><h3>'+esc(x.name)+'</h3><p>اتصال واقعی: '+(x.configured?"فعال":"هنوز پیکربندی نشده")+'</p></article>').join("")}
-async function boot(){try{let me=await api("/auth/me");$("#who").textContent=me.username;$("#login").classList.add("hidden");$("#app").classList.remove("hidden");await load()}catch(e){logout()}}
-function page(n){$$(".page").forEach(x=>x.classList.add("hidden"));$("#"+(n==="nodes"?"nodes-page":n)).classList.remove("hidden");$$(".nav").forEach(x=>x.classList.toggle("active",x.dataset.p===n));$("#title").textContent=({overview:"داشبورد مدیریت",customers:"مدیریت کاربران",nodes:"مدیریت سرورها",protocols:"پروتکل‌ها"})[n]}
-$$(".nav").forEach(x=>x.onclick=()=>page(x.dataset.p));$("#reload").onclick=()=>load().then(()=>msg("اطلاعات به‌روزرسانی شد")).catch(e=>msg(e.message));$("#out").onclick=logout;
-$("#addc").onclick=()=>$("#cf").classList.toggle("hidden");$("#cf").onsubmit=async e=>{e.preventDefault();try{let d={username:$("#cu").value,protocol:$("#cp").value,quota_gb:+$("#cq").value,expires_at:new Date($("#ce").value).toISOString(),node_id:$("#cn").value?+$("#cn").value:null};let r=await api("/customers",{method:"POST",body:JSON.stringify(d)});msg(r.notice);e.target.reset();$("#cf").classList.add("hidden");await load()}catch(x){msg(x.message)}};
-$("#addn").onclick=()=>$("#nf").classList.toggle("hidden");$("#nf").onsubmit=async e=>{e.preventDefault();try{let r=await api("/nodes",{method:"POST",body:JSON.stringify({name:$("#nn").value,address:$("#na").value})});$("#mt").textContent="ID: "+r.id+"\nName: "+r.name+"\nToken: "+r.agent_token+"\n"+r.warning;$("#modal").classList.remove("hidden");e.target.reset();await load()}catch(x){msg(x.message)}};
-$("#mc").onclick=()=>$("#modal").classList.add("hidden");$("#copy").onclick=()=>navigator.clipboard.writeText($("#mt").textContent);if(t)boot();else logout();
-</script></body></html>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+let t = localStorage.getItem("batman_token") || "";
+let cs = [], ns = [];
+
+function esc(x) {
+  return String(x ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;"
+  }[c]));
+}
+
+async function api(path, opt = {}) {
+  const h = { "Content-Type": "application/json" };
+  if (t) h.Authorization = "Bearer " + t;
+  const r = await fetch("/api" + path, { ...opt, headers: h });
+  let d = {};
+  try { d = await r.json(); } catch {}
+  if (!r.ok) {
+    if (r.status === 401) logout();
+    throw Error(d.detail || "خطای درخواست");
+  }
+  return d;
+}
+
+function logout() {
+  t = "";
+  localStorage.removeItem("batman_token");
+  $("#login").classList.remove("hidden");
+  $("#app").classList.add("hidden");
+}
+
+function msg(x, type = "") {
+  const el = $("#msg");
+  el.textContent = x;
+  el.className = "notice " + (type || "");
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 6000);
+}
+
+$("#lf").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const d = await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username: $("#u").value, password: $("#p").value })
+    });
+    t = d.access_token;
+    localStorage.setItem("batman_token", t);
+    await boot();
+  } catch (x) {
+    $("#err").textContent = x.message;
+  }
+};
+
+function date(x) {
+  const d = new Date(x);
+  return x && !isNaN(d) ? d.toLocaleString("fa-IR") : "—";
+}
+
+function statusTag(status, prov) {
+  let cls = "tag";
+  if (status === "active") cls += " good";
+  else if (status === "suspended" || status === "expired") cls += " bad";
+  else if (status === "pending") cls += " pending";
+  if (prov === "generated") cls += " generated";
+  return `<span class="${cls}">${esc(status)} · ${esc(prov)}</span>`;
+}
+
+function tbl(a, full = false) {
+  if (!a.length) return '<div class="empty">هنوز موردی ثبت نشده است.</div>';
+  const rows = a.map(x => {
+    const used = x.used_gb != null ? x.used_gb.toFixed(2) + " / " + x.quota_gb : x.quota_gb + " GB";
+    const btn = full ? `<button class="secondary" style="padding:6px 10px;font-size:11px" data-cfg="${x.id}">کانفیگ</button>` : "";
+    return `<tr>
+      <td>${x.id}</td>
+      <td>${esc(x.username)}</td>
+      <td>${esc((x.protocol || "").toUpperCase())}</td>
+      <td>${used}</td>
+      <td>${date(x.expires_at)}</td>
+      <td>${statusTag(x.status, x.provisioning_status)}</td>
+      <td>${btn}</td>
+    </tr>`;
+  }).join("");
+  return `<table><thead><tr>
+    <th>شناسه</th><th>نام</th><th>پروتکل</th><th>حجم</th><th>انقضا</th><th>وضعیت</th>${full ? "<th>عملیات</th>" : ""}
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function load() {
+  const [d, c, n, p] = await Promise.all([
+    api("/dashboard"),
+    api("/customers"),
+    api("/nodes"),
+    api("/protocols")
+  ]);
+  cs = c;
+  ns = n;
+  $("#total").textContent = d.customers_total;
+  $("#active").textContent = d.customers_active;
+  $("#nodes").textContent = d.nodes_total + " (آنلاین " + d.nodes_online + ")";
+  $("#pending").textContent = (d.customers_pending || 0) + " / " + (d.customers_expired || 0);
+  $("#recent").innerHTML = tbl(c.slice(0, 6));
+  $("#ct").innerHTML = tbl(c, true);
+  $("#cn").innerHTML = '<option value="">بدون سرور</option>' +
+    n.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("#nt").innerHTML = n.length
+    ? `<table><thead><tr><th>نام</th><th>آدرس</th><th>وضعیت</th><th>آخرین ارتباط</th></tr></thead><tbody>` +
+      n.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.address)}</td><td>${esc(x.status)}</td><td>${date(x.last_seen)}</td></tr>`).join("") +
+      `</tbody></table>`
+    : '<div class="empty">هنوز سروری ثبت نشده است.</div>';
+  $("#pt").innerHTML = p.map(x => `
+    <article class="panel protocol-card">
+      <h3>${esc(x.name)}</h3>
+      <p>وضعیت: ${x.configured ? "آماده تولید کانفیگ" : "در حال توسعه"}</p>
+      <p style="margin-top:8px;font-size:11px;color:var(--muted)">${esc(x.description || "")}</p>
+    </article>`).join("");
+
+  // bind config buttons
+  $$("[data-cfg]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        const conf = await api("/customers/" + btn.dataset.cfg + "/config");
+        $("#modal-title").textContent = "کانفیگ " + (conf.username || "");
+        $("#mt").textContent = conf.share_link || conf.config_text || JSON.stringify(conf, null, 2);
+        $("#modal").classList.remove("hidden");
+      } catch (e) { msg(e.message); }
+    };
+  });
+}
+
+async function boot() {
+  try {
+    const me = await api("/auth/me");
+    $("#who").textContent = me.username;
+    $("#login").classList.add("hidden");
+    $("#app").classList.remove("hidden");
+    await load();
+  } catch (e) { logout(); }
+}
+
+function page(n) {
+  $$(".page").forEach(x => x.classList.add("hidden"));
+  $("#" + (n === "nodes" ? "nodes-page" : n)).classList.remove("hidden");
+  $$(".nav").forEach(x => x.classList.toggle("active", x.dataset.p === n));
+  $("#title").textContent = {
+    overview: "داشبورد مدیریت",
+    customers: "مدیریت کاربران",
+    nodes: "مدیریت سرورها",
+    protocols: "پروتکل‌ها"
+  }[n];
+}
+
+$$(".nav").forEach(x => x.onclick = () => page(x.dataset.p));
+$("#reload").onclick = () => load().then(() => msg("اطلاعات به‌روزرسانی شد", "success")).catch(e => msg(e.message));
+$("#out").onclick = logout;
+
+$("#addc").onclick = () => $("#cf").classList.toggle("hidden");
+$("#cf").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const d = {
+      username: $("#cu").value,
+      protocol: $("#cp").value,
+      quota_gb: +$("#cq").value,
+      expires_at: new Date($("#ce").value).toISOString(),
+      node_id: $("#cn").value ? +$("#cn").value : null
+    };
+    const r = await api("/customers", { method: "POST", body: JSON.stringify(d) });
+    msg(r.notice || "کاربر ثبت و کانفیگ ساخته شد", "success");
+    e.target.reset();
+    $("#cf").classList.add("hidden");
+    await load();
+  } catch (x) { msg(x.message); }
+};
+
+$("#addn").onclick = () => $("#nf").classList.toggle("hidden");
+$("#nf").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const r = await api("/nodes", {
+      method: "POST",
+      body: JSON.stringify({ name: $("#nn").value, address: $("#na").value })
+    });
+    $("#modal-title").textContent = "توکن Agent (فقط یک‌بار)";
+    $("#mt").textContent = "ID: " + r.id + "\nName: " + r.name + "\nToken: " + r.agent_token + "\n\n" + (r.warning || "");
+    $("#modal").classList.remove("hidden");
+    e.target.reset();
+    await load();
+  } catch (x) { msg(x.message); }
+};
+
+$("#mc").onclick = $("#mc2").onclick = () => $("#modal").classList.add("hidden");
+$("#copy").onclick = () => navigator.clipboard.writeText($("#mt").textContent).then(() => msg("کپی شد", "success"));
+
+if (t) boot(); else logout();
+</script>
+</body>
+</html>
