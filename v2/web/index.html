@@ -161,20 +161,32 @@ let t = localStorage.getItem("batman_token") || "";
 let cs = [], ns = [];
 
 function esc(x) {
-  return String(x ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;"
-  }[c]));
+  const entities = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  };
+  return String(x == null ? "" : x).replace(/[&<>"']/g, c => entities[c]);
 }
 
 async function api(path, opt = {}) {
   const h = { "Content-Type": "application/json" };
   if (t) h.Authorization = "Bearer " + t;
-  const r = await fetch("/api" + path, { ...opt, headers: h });
+  let r;
+  try {
+    r = await fetch("/api" + path, { ...opt, headers: h });
+  } catch {
+    throw Error("ارتباط با پنل برقرار نشد؛ آدرس پنل و اتصال شبکه را بررسی کنید.");
+  }
   let d = {};
   try { d = await r.json(); } catch {}
   if (!r.ok) {
     if (r.status === 401) logout();
-    throw Error(d.detail || "خطای درخواست");
+    const detail = d.detail;
+    const reason = Array.isArray(detail) ? detail.map(x => x.msg || JSON.stringify(x)).join("؛ ") : (typeof detail === "string" ? detail : "خطای درخواست");
+    throw Error(reason);
   }
   return d;
 }
@@ -194,20 +206,44 @@ function msg(x, type = "") {
   setTimeout(() => el.classList.add("hidden"), 6000);
 }
 
-$("#lf").onsubmit = async e => {
+const loginForm = $("#lf");
+const loginButton = loginForm.querySelector('button[type="submit"], button:not([type])');
+loginForm.addEventListener("submit", async e => {
   e.preventDefault();
+  const errorBox = $("#err");
+  const username = $("#u").value;
+  const password = $("#p").value;
+  errorBox.textContent = "";
+  if (loginButton) {
+    loginButton.disabled = true;
+    loginButton.textContent = "در حال بررسی...";
+  }
   try {
     const d = await api("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: $("#u").value, password: $("#p").value })
+      body: JSON.stringify({ username, password })
     });
+    if (!d || typeof d.access_token !== "string" || !d.access_token) {
+      throw new Error("پاسخ ورود از سرور معتبر نیست؛ سرویس پنل را بررسی کنید.");
+    }
     t = d.access_token;
     localStorage.setItem("batman_token", t);
     await boot();
+    if (!$("#app").classList.contains("hidden")) $("#p").value = "";
   } catch (x) {
-    $("#err").textContent = x.message;
+    t = "";
+    localStorage.removeItem("batman_token");
+    const message = x && x.message ? x.message : "ورود انجام نشد.";
+    errorBox.textContent = message;
+    $("#login").classList.remove("hidden");
+    $("#app").classList.add("hidden");
+  } finally {
+    if (loginButton) {
+      loginButton.disabled = false;
+      loginButton.textContent = "ورود";
+    }
   }
-};
+});
 
 function date(x) {
   const d = new Date(x);
