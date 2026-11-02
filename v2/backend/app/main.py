@@ -473,6 +473,7 @@ def list_customers(db: Session = Depends(get_db), admin: Admin = Depends(current
 
 @app.post("/api/customers", status_code=201)
 def create_customer(data: CustomerInput, db: Session = Depends(get_db), admin: Admin = Depends(current_admin)):
+    raise HTTPException(status_code=503, detail="هسته‌های VPN و Agent هنوز نصب نشده‌اند؛ ساخت حساب موقتاً غیرفعال است.")
     if data.expires_at.tzinfo is None:
         raise HTTPException(status_code=422, detail="expires_at باید timezone داشته باشد")
     if db.scalar(select(Customer).where(Customer.username == data.username)):
@@ -578,11 +579,11 @@ def check_expiry(db: Session = Depends(get_db), admin: Admin = Depends(current_a
 @app.get("/api/protocols")
 def protocols(admin: Admin = Depends(current_admin)):
     return [
-        {"id": "vless", "name": "VLESS", "configured": True, "status": "ready", "description": "تولید لینک و inbound آماده است."},
-        {"id": "vmess", "name": "VMess", "configured": True, "status": "ready", "description": "تولید لینک استاندارد VMess."},
-        {"id": "trojan", "name": "Trojan", "configured": True, "status": "ready", "description": "تولید پسورد و لینک Trojan."},
-        {"id": "wireguard", "name": "WireGuard", "configured": True, "status": "ready", "description": "تولید فایل .conf."},
-        {"id": "openvpn", "name": "OpenVPN", "configured": True, "status": "template", "description": "قالب .ovpn."},
+        {"id": "vless", "name": "VLESS", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        {"id": "vmess", "name": "VMess", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        {"id": "trojan", "name": "Trojan", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        ,
+        {"id": "openvpn", "name": "OpenVPN", "configured": False, "status": "engine_pending", "description": "OpenVPN و Agent هنوز نصب نشده‌اند."},
     ]
 
 
