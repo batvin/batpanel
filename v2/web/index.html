@@ -58,7 +58,7 @@
         <h2>خوش آمدید</h2>
         <p>آمار زنده و وضعیت سرویس‌های Batman V2</p>
       </div>
-      <div class="notice warning" id="sys-notice">کانفیگ‌ها تولید می‌شوند. برای اعمال واقعی روی نودها، Agent و سرویس‌های VPN را نصب کنید.</div>
+      <div class="notice warning" id="sys-notice">هسته‌های Xray و OpenVPN هنوز نصب نشده‌اند؛ تا فعال‌سازی Agent، ساخت حساب عملیاتی در دسترس نیست.</div>
       <div class="stats">
         <article class="stat">
           <span>کل کاربران</span>
@@ -100,14 +100,13 @@
             <option value="vmess">VMess</option>
             <option value="trojan">Trojan</option>
             <option value="openvpn">OpenVPN</option>
-            <option value="wireguard">WireGuard</option>
           </select>
         </label>
         <label>حجم GB<input id="cq" type="number" min="1" value="50"></label>
         <label>انقضا<input id="ce" type="datetime-local" required></label>
         <label>سرور<select id="cn"><option value="">بدون سرور</option></select></label>
         <button class="primary">ثبت و ساخت کانفیگ</button>
-        <p class="form-note">با ثبت، کانفیگ واقعی پروتکل تولید و ذخیره می‌شود. اعمال روی نود نیاز به Agent دارد.</p>
+        <p class="form-note">اعمال حساب پس از نصب هسته VPN و Agent فعال می‌شود.</p>
       </form>
       <div class="panel">
         <div id="ct" class="table-wrap"></div>

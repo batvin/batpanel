@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
 
-APP_VERSION = "2.1.1-glass"
+APP_VERSION = "2.2.0-core-foundation"
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////data/batman-v2.db")
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -27,7 +27,6 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 TOKEN_TTL_HOURS = int(os.getenv("TOKEN_TTL_HOURS", "8"))
 DEFAULT_SERVER_HOST = os.getenv("DEFAULT_SERVER_HOST", "YOUR_SERVER_IP")
 DEFAULT_XRAY_PORT = int(os.getenv("DEFAULT_XRAY_PORT", "443"))
-DEFAULT_WG_PORT = int(os.getenv("DEFAULT_WG_PORT", "51820"))
 DEFAULT_OVPN_PORT = int(os.getenv("DEFAULT_OVPN_PORT", "1194"))
 
 if len(JWT_SECRET) < 32:
@@ -202,12 +201,6 @@ def generate_password(length: int = 16) -> str:
     return secrets.token_urlsafe(length)[:length]
 
 
-def generate_wg_keys() -> tuple[str, str]:
-    priv = base64.b64encode(secrets.token_bytes(32)).decode()
-    pub = base64.b64encode(secrets.token_bytes(32)).decode()
-    return priv, pub
-
-
 def build_config(protocol: str, username: str, node: Node | None, uid: str | None = None) -> dict:
     host = resolve_host(node)
     uid = uid or generate_uuid()
@@ -277,34 +270,6 @@ def build_config(protocol: str, username: str, node: Node | None, uid: str | Non
         }, indent=2, ensure_ascii=False)
         result["extra"] = {"port": DEFAULT_XRAY_PORT, "host": host, "password": password}
 
-    elif protocol == "wireguard":
-        priv, pub = generate_wg_keys()
-        client_priv, client_pub = generate_wg_keys()
-        client_ip = f"10.66.66.{secrets.randbelow(200) + 2}/32"
-        conf = f"""[Interface]
-PrivateKey = {client_priv}
-Address = {client_ip}
-DNS = 1.1.1.1, 8.8.8.8
-
-[Peer]
-PublicKey = {pub}
-Endpoint = {host}:{DEFAULT_WG_PORT}
-AllowedIPs = 0.0.0.0/0, ::/0
-PersistentKeepalive = 25
-"""
-        result["share_link"] = conf.strip()
-        result["config_text"] = conf.strip()
-        result["uuid"] = client_pub
-        result["extra"] = {
-            "server_public_key": pub,
-            "server_private_key": priv,
-            "client_public_key": client_pub,
-            "client_private_key": client_priv,
-            "client_ip": client_ip,
-            "port": DEFAULT_WG_PORT,
-            "host": host,
-        }
-
     elif protocol == "openvpn":
         conf = f"""client
 dev tun
@@ -364,7 +329,7 @@ class NodeInput(BaseModel):
 
 class CustomerInput(BaseModel):
     username: str = Field(pattern=r"^[a-zA-Z0-9_.-]{3,64}$")
-    protocol: Literal["openvpn", "vless", "vmess", "trojan", "wireguard"]
+    protocol: Literal["openvpn", "vless", "vmess", "trojan"]
     quota_gb: int = Field(ge=1, le=100000)
     expires_at: datetime
     node_id: int | None = None
@@ -404,7 +369,7 @@ def startup():
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": APP_VERSION, "mode": "control-plane-config-gen"}
+    return {"ok": True, "version": APP_VERSION, "mode": "engine-agent-not-installed"}
 
 
 @app.post("/api/auth/login")
@@ -437,8 +402,8 @@ def dashboard(db: Session = Depends(get_db), admin: Admin = Depends(current_admi
         "customers_suspended": sum(1 for c in customers if c.status == "suspended"),
         "nodes_total": len(nodes),
         "nodes_online": sum(1 for n in nodes if n.status == "online"),
-        "protocols": ["openvpn", "vless", "vmess", "trojan", "wireguard"],
-        "live_provisioning": True,
+        "protocols": ["openvpn", "vless", "vmess", "trojan"],
+        "live_provisioning": False,
         "config_generation": True,
     }
 
@@ -508,6 +473,7 @@ def list_customers(db: Session = Depends(get_db), admin: Admin = Depends(current
 
 @app.post("/api/customers", status_code=201)
 def create_customer(data: CustomerInput, db: Session = Depends(get_db), admin: Admin = Depends(current_admin)):
+    raise HTTPException(status_code=503, detail="هسته‌های VPN و Agent هنوز نصب نشده‌اند؛ ساخت حساب موقتاً غیرفعال است.")
     if data.expires_at.tzinfo is None:
         raise HTTPException(status_code=422, detail="expires_at باید timezone داشته باشد")
     if db.scalar(select(Customer).where(Customer.username == data.username)):
@@ -613,11 +579,10 @@ def check_expiry(db: Session = Depends(get_db), admin: Admin = Depends(current_a
 @app.get("/api/protocols")
 def protocols(admin: Admin = Depends(current_admin)):
     return [
-        {"id": "vless", "name": "VLESS", "configured": True, "status": "ready", "description": "تولید لینک و inbound آماده است."},
-        {"id": "vmess", "name": "VMess", "configured": True, "status": "ready", "description": "تولید لینک استاندارد VMess."},
-        {"id": "trojan", "name": "Trojan", "configured": True, "status": "ready", "description": "تولید پسورد و لینک Trojan."},
-        {"id": "wireguard", "name": "WireGuard", "configured": True, "status": "ready", "description": "تولید فایل .conf."},
-        {"id": "openvpn", "name": "OpenVPN", "configured": True, "status": "template", "description": "قالب .ovpn."},
+        {"id": "vless", "name": "VLESS", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        {"id": "vmess", "name": "VMess", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        {"id": "trojan", "name": "Trojan", "configured": False, "status": "engine_pending", "description": "Xray و Agent هنوز نصب نشده‌اند."},
+        {"id": "openvpn", "name": "OpenVPN", "configured": False, "status": "engine_pending", "description": "OpenVPN و Agent هنوز نصب نشده‌اند."},
     ]
 
 
