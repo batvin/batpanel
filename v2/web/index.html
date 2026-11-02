@@ -168,7 +168,7 @@ function esc(x) {
     '"': "&quot;",
     "'": "&#39;"
   };
-  return String(x ?? "").replace(/[&<>"']/g, c => entities[c]);
+  return String(x == null ? "" : x).replace(/[&<>"']/g, c => entities[c]);
 }
 
 async function api(path, opt = {}) {
