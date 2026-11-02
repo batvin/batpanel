@@ -174,12 +174,19 @@ function esc(x) {
 async function api(path, opt = {}) {
   const h = { "Content-Type": "application/json" };
   if (t) h.Authorization = "Bearer " + t;
-  const r = await fetch("/api" + path, { ...opt, headers: h });
+  let r;
+  try {
+    r = await fetch("/api" + path, { ...opt, headers: h });
+  } catch {
+    throw Error("ارتباط با پنل برقرار نشد؛ آدرس پنل و اتصال شبکه را بررسی کنید.");
+  }
   let d = {};
   try { d = await r.json(); } catch {}
   if (!r.ok) {
     if (r.status === 401) logout();
-    throw Error(d.detail || "خطای درخواست");
+    const detail = d.detail;
+    const reason = Array.isArray(detail) ? detail.map(x => x.msg || JSON.stringify(x)).join("؛ ") : (typeof detail === "string" ? detail : "خطای درخواست");
+    throw Error(reason);
   }
   return d;
 }
